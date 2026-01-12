@@ -1,4 +1,5 @@
 import ConnectLink from "@/components/connect/ConnectLink";
+import Logo from "@/components/Logo";
 import { settingsAtom } from "@/store/settings";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
@@ -26,7 +27,7 @@ const Header: React.FC = () => {
           to="/"
           className="flex items-center gap-2 text-foreground transition-all duration-300 hover:scale-[103%] hover:no-underline hover:opacity-80"
         >
-          <img src={settings.darkMode ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-10" />
+          <Logo className="h-10" />
         </Link>
 
         <div className="flex items-center gap-2">

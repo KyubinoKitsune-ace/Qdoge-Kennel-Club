@@ -25,9 +25,9 @@ const Home: React.FC = () => {
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-12 text-center md:gap-16">
         <header className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.6em] text-primary/70">Qdoge - Kennel Club</p>
-          <h1 className="font-space text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">QX Dashboard</h1>
+          <h1 className="font-space text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">Dashboard</h1>
           <p className="mx-auto max-w-2xl text-base text-muted-foreground sm:text-lg">
-            QX is a decentralized exchange running as a smart contract on the Qubic network.
+          A Qubic ecosystem dashboard for QDoge token holders to log in, view activity (buys/sells/transfers), check epoch ranks by purchase amount, qualify for top-100 weekly airdrops, and earn never-sell rewards.
           </p>
         </header>
 

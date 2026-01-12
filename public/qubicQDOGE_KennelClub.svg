@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96" viewBox="0 0 360 96">
+  <!-- Background (same vibe as image1) -->
+  <!-- Background made transparent -->
+  <rect x="0" y="0" width="360" height="96" fill="none"/>
+  <!-- Icon -->
+  <rect x="24" y="33" width="10" height="30" fill="#82899A"/>
+  <rect x="40" y="33" width="12" height="40" fill="#82899A"/>
+  <!-- Main line -->
+  <text x="70" y="60"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="40" font-weight="700">
+    <tspan fill="#575F6C">qubic</tspan><tspan fill="#00A2E8" font-weight="700">QDOGE</tspan>
+  </text>
+  <!-- Sub line -->
+  <text x="196" y="82"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="18" font-weight="600"
+        fill="#C9D1E3">Kennel Club</text>
+</svg>
