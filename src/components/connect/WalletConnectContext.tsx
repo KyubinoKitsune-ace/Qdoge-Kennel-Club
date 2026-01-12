@@ -180,7 +180,7 @@ export function WalletConnectProvider({ children }: WalletConnectProviderProps) 
 
   useEffect(() => {
     SignClient.init({
-      projectId: "2697d842a392d20a355416a260f58276",
+      projectId: "b00ed5131a6fe845e8cf58e6dcb0cf05",
       metadata: {
         name: "Qdoge-Kennel-Club",
         description: "Qdoge-Kennel-Club",
