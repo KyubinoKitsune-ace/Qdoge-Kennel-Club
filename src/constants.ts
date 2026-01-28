@@ -2,6 +2,8 @@ export const RPC_URL = "https://rpc.qubic.org";
 
 export const API_URL = "https://dev01.qubic.org";
 
+export const BACKEND_API_URL = import.meta.env.VITE_API_URL || "/api";
+
 export const EXPLORER_URL = "https://explorer.qubic.org";
 
 export const DEFAULT_TX_SIZE = 144;
