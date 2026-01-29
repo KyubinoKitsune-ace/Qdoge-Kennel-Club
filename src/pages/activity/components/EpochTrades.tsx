@@ -12,8 +12,12 @@ const fmt = (n: number) => {
   return abs >= 1e6 ? `${sign}${(abs / 1e6).toFixed(1)}M` : abs >= 1e3 ? `${sign}${(abs / 1e3).toFixed(0)}K` : n.toLocaleString();
 };
 const short = (s: string) => `${s.slice(0, 5)}...${s.slice(-5)}`;
-const WalletLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
-  <Link to={`/entity/${to}`} className="text-primary hover:text-primary/70">{children}</Link>
+
+const WalletWithZealy = ({ wallet, isZealyRegistered }: { wallet: string; isZealyRegistered: boolean }) => (
+  <div className="flex items-center gap-1">
+    <Link to={`/entity/${wallet}`} className="text-primary hover:text-primary/70">{short(wallet)}</Link>
+    {isZealyRegistered && <span className="text-green-500 text-xs">✅</span>}
+  </div>
 );
 
 const tableClass = "table-auto [&_td]:whitespace-nowrap [&_td]:text-center [&_th]:text-center";
@@ -36,18 +40,77 @@ const EpochTrades: React.FC<{ epoch: number }> = ({ epoch }) => {
   }, [epoch]);
 
   const { buyers, sellers, totals } = useMemo(() => {
-    const bMap = new Map<string, number>(), sMap = new Map<string, number>();
-    const tMap = new Map<string, { wallet: string; buy: number; sell: number; total: number }>();
-    trades.forEach(({ type, total, taker_wallet: w }) => {
-      const amt = Number(total), isBuy = type === "buy";
-      (isBuy ? bMap : sMap).set(w, ((isBuy ? bMap : sMap).get(w) || 0) + amt);
-      const t = tMap.get(w) || { wallet: w, buy: 0, sell: 0, total: 0 };
-      isBuy ? (t.buy += amt) : (t.sell += amt);
-      t.total = t.buy - t.sell;
-      tMap.set(w, t);
+    const bMap = new Map<string, { amount: number; tokens: number; zealy: boolean }>();
+    const sMap = new Map<string, { amount: number; tokens: number; zealy: boolean }>();
+    const tMap = new Map<string, { wallet: string; buy: number; sell: number; buyTokens: number; sellTokens: number; zealy: boolean }>();
+
+    trades.forEach(({ type, price, quantity, taker_wallet, maker_wallet, taker_is_zealy_registered, maker_is_zealy_registered }) => {
+      const tradeAmount = Number(price) * Number(quantity);
+      const quantityNum = Number(quantity);
+
+      if (type === "buy") {
+        const buyer = taker_wallet, seller = maker_wallet;
+        
+        // Update buyer
+        const b = bMap.get(buyer) || { amount: 0, tokens: 0, zealy: taker_is_zealy_registered };
+        b.amount += tradeAmount;
+        b.tokens += quantityNum;
+        bMap.set(buyer, b);
+
+        // Update seller
+        const s = sMap.get(seller) || { amount: 0, tokens: 0, zealy: maker_is_zealy_registered };
+        s.amount += tradeAmount;
+        s.tokens += quantityNum;
+        sMap.set(seller, s);
+
+        // Update buyer total
+        const bt = tMap.get(buyer) || { wallet: buyer, buy: 0, sell: 0, buyTokens: 0, sellTokens: 0, zealy: taker_is_zealy_registered };
+        bt.buy += tradeAmount;
+        bt.buyTokens += quantityNum;
+        tMap.set(buyer, bt);
+
+        // Update seller total
+        const st = tMap.get(seller) || { wallet: seller, buy: 0, sell: 0, buyTokens: 0, sellTokens: 0, zealy: maker_is_zealy_registered };
+        st.sell += tradeAmount;
+        st.sellTokens += quantityNum;
+        tMap.set(seller, st);
+      } else {
+        const seller = taker_wallet, buyer = maker_wallet;
+        
+        // Update seller
+        const s = sMap.get(seller) || { amount: 0, tokens: 0, zealy: taker_is_zealy_registered };
+        s.amount += tradeAmount;
+        s.tokens += quantityNum;
+        sMap.set(seller, s);
+
+        // Update buyer
+        const b = bMap.get(buyer) || { amount: 0, tokens: 0, zealy: maker_is_zealy_registered };
+        b.amount += tradeAmount;
+        b.tokens += quantityNum;
+        bMap.set(buyer, b);
+
+        // Update seller total
+        const st = tMap.get(seller) || { wallet: seller, buy: 0, sell: 0, buyTokens: 0, sellTokens: 0, zealy: taker_is_zealy_registered };
+        st.sell += tradeAmount;
+        st.sellTokens += quantityNum;
+        tMap.set(seller, st);
+
+        // Update buyer total
+        const bt = tMap.get(buyer) || { wallet: buyer, buy: 0, sell: 0, buyTokens: 0, sellTokens: 0, zealy: maker_is_zealy_registered };
+        bt.buy += tradeAmount;
+        bt.buyTokens += quantityNum;
+        tMap.set(buyer, bt);
+      }
     });
-    const toArr = (m: Map<string, number>) => [...m].map(([wallet, amount]) => ({ wallet, amount })).sort((a, b) => b.amount - a.amount);
-    return { buyers: toArr(bMap), sellers: toArr(sMap), totals: [...tMap.values()].sort((a, b) => Math.abs(b.total) - Math.abs(a.total)) };
+
+    const toArr = (m: Map<string, { amount: number; tokens: number; zealy: boolean }>) => 
+      [...m].map(([wallet, { amount, tokens, zealy }]) => ({ wallet, amount, tokens, isZealyRegistered: zealy })).sort((a, b) => b.amount - a.amount);
+    
+    return { 
+      buyers: toArr(bMap), 
+      sellers: toArr(sMap), 
+      totals: [...tMap.values()].map(t => ({ ...t, isZealyRegistered: t.zealy, total: t.buy - t.sell, totalTokens: t.buyTokens - t.sellTokens })).sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+    };
   }, [trades]);
 
   if (isLoading || error || !trades.length) {
@@ -89,8 +152,8 @@ const EpochTrades: React.FC<{ epoch: number }> = ({ epoch }) => {
                         <TableCell className="hidden md:table-cell truncate">
                           <Link to={`${EXPLORER_URL}/network/tx/${t.tx_hash}`} target="_blank" className="text-primary hover:text-primary/70">{short(t.tx_hash)}</Link>
                         </TableCell>
-                        <TableCell><WalletLink to={t.taker_wallet}>{short(t.taker_wallet)}</WalletLink></TableCell>
-                        <TableCell className="hidden md:table-cell"><WalletLink to={t.maker_wallet}>{short(t.maker_wallet)}</WalletLink></TableCell>
+                        <TableCell><WalletWithZealy wallet={t.taker_wallet} isZealyRegistered={t.taker_is_zealy_registered} /></TableCell>
+                        <TableCell className="hidden md:table-cell"><WalletWithZealy wallet={t.maker_wallet} isZealyRegistered={t.maker_is_zealy_registered} /></TableCell>
                         <TableCell>{new Date(t.tickdate).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
@@ -110,10 +173,14 @@ const EpochTrades: React.FC<{ epoch: number }> = ({ epoch }) => {
             <ScrollArea type="hover" scrollHideDelay={200} className="h-full">
               <div className="pr-1">
                 <Table wrapperClassName="h-full min-h-0 !overflow-visible" className={tableClass}>
-                  <TableHeader className={headerClass}><TableRow><TableHead>Wallet</TableHead><TableHead>Amount</TableHead></TableRow></TableHeader>
+                  <TableHeader className={headerClass}><TableRow><TableHead>Wallet</TableHead><TableHead>Token</TableHead><TableHead>Amount</TableHead></TableRow></TableHeader>
                   <TableBody className={bodyClass}>
                     {buyers.map((b, i) => (
-                      <TableRow key={i}><TableCell><WalletLink to={b.wallet}>{short(b.wallet)}</WalletLink></TableCell><TableCell className="!text-right text-green-500">{fmt(b.amount)}</TableCell></TableRow>
+                      <TableRow key={i}>
+                        <TableCell><WalletWithZealy wallet={b.wallet} isZealyRegistered={b.isZealyRegistered} /></TableCell>
+                        <TableCell className="!text-right">{fmt(b.tokens)}</TableCell>
+                        <TableCell className="!text-right text-green-500">{fmt(b.amount)}</TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -131,10 +198,14 @@ const EpochTrades: React.FC<{ epoch: number }> = ({ epoch }) => {
             <ScrollArea type="hover" scrollHideDelay={200} className="h-full">
               <div className="pr-1">
                 <Table wrapperClassName="h-full min-h-0 !overflow-visible" className={tableClass}>
-                  <TableHeader className={headerClass}><TableRow><TableHead>Wallet</TableHead><TableHead>Amount</TableHead></TableRow></TableHeader>
+                  <TableHeader className={headerClass}><TableRow><TableHead>Wallet</TableHead><TableHead>Token</TableHead><TableHead>Amount</TableHead></TableRow></TableHeader>
                   <TableBody className={bodyClass}>
                     {sellers.map((s, i) => (
-                      <TableRow key={i}><TableCell><WalletLink to={s.wallet}>{short(s.wallet)}</WalletLink></TableCell><TableCell className="!text-right text-red-500">{fmt(s.amount)}</TableCell></TableRow>
+                      <TableRow key={i}>
+                        <TableCell><WalletWithZealy wallet={s.wallet} isZealyRegistered={s.isZealyRegistered} /></TableCell>
+                        <TableCell className="!text-right">{fmt(s.tokens)}</TableCell>
+                        <TableCell className="!text-right text-red-500">{fmt(s.amount)}</TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -151,14 +222,32 @@ const EpochTrades: React.FC<{ epoch: number }> = ({ epoch }) => {
           <div className={cardClass}>
             <ScrollArea type="hover" scrollHideDelay={200} className="h-full">
               <div className="pr-1">
-                <Table wrapperClassName="h-full min-h-0 !overflow-visible" className={`${tableClass} min-w-[300px]`}>
-                  <TableHeader className={headerClass}><TableRow><TableHead>Wallet</TableHead><TableHead>Buy</TableHead><TableHead>Sell</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
+                <Table wrapperClassName="h-full min-h-0 !overflow-visible" className={`${tableClass} min-w-[600px]`}>
+                  <TableHeader className={headerClass}>
+                    <TableRow>
+                      <TableHead>Wallet</TableHead>
+                      <TableHead>Buy_Token</TableHead>
+                      <TableHead>Buy_Amt</TableHead>
+                      <TableHead>Sell_Token</TableHead>
+                      <TableHead>Sell_Amt</TableHead>
+                      <TableHead>Total_Token</TableHead>
+                      <TableHead>Total_Amt</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody className={bodyClass}>
                     {totals.map((t, i) => (
                       <TableRow key={i}>
-                        <TableCell><WalletLink to={t.wallet}>{short(t.wallet)}</WalletLink></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Link to={`/entity/${t.wallet}`} className="text-primary hover:text-primary/70">{short(t.wallet)}</Link>
+                            {t.isZealyRegistered && <span className="text-green-500 text-xs">✅</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="!text-right">{fmt(t.buyTokens)}</TableCell>
                         <TableCell className="!text-right text-green-500">{fmt(t.buy)}</TableCell>
+                        <TableCell className="!text-right">{fmt(t.sellTokens)}</TableCell>
                         <TableCell className="!text-right text-red-500">{fmt(t.sell)}</TableCell>
+                        <TableCell className="!text-right text-primary">{fmt(t.totalTokens)}</TableCell>
                         <TableCell className="!text-right text-primary font-medium">{fmt(t.total)}</TableCell>
                       </TableRow>
                     ))}

@@ -8,6 +8,24 @@ interface AirdropResultsProps {
   epoch: number;
 }
 
+const MEDAL_EMOJIS = { 1: "🥇", 2: "🥈", 3: "🥉" } as const;
+
+const WalletCell = ({ wallet, isZealyRegistered }: { wallet: string; isZealyRegistered: boolean }) => (
+  <div className="flex items-center gap-1">
+    <Link to={`/entity/${wallet}`} className="text-primary hover:text-primary/70">
+      {wallet.slice(0, 5)}...{wallet.slice(-5)}
+    </Link>
+    {isZealyRegistered && <span className="text-green-500 text-xs">✅</span>}
+  </div>
+);
+
+const formatAmount = (amount: string): string => {
+  const num = Number(amount);
+  if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+  if (num >= 1e3) return `${(num / 1e3).toFixed(0)}K`;
+  return num.toLocaleString();
+};
+
 const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch }) => {
   const [results, setResults] = useState<AirdropResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +39,6 @@ const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch }) => {
         setIsLoading(true);
         setError(null);
         
-        // Try to fetch stored results first
         try {
           const storedResults = await fetchAirdropResults(epoch);
           if (storedResults.length > 0) {
@@ -30,11 +47,9 @@ const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch }) => {
             return;
           }
         } catch (err) {
-          // If no stored results, fall through to preview
           console.log("No stored results, fetching preview...");
         }
         
-        // Fetch preview (real-time calculation)
         const previewData = await fetchAirdropPreview(epoch);
         setResults(previewData.results);
         setIsPreview(previewData.preview);
@@ -49,14 +64,6 @@ const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch }) => {
     
     getAirdropResults();
   }, [epoch]);
-
-  // Format large numbers
-  const formatAmount = (amount: string): string => {
-    const num = Number(amount);
-    if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
-    if (num >= 1e3) return `${(num / 1e3).toFixed(0)}K`;
-    return num.toLocaleString();
-  };
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -106,20 +113,15 @@ const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch }) => {
                 {results.map((result) => (
                   <TableRow key={result.rank}>
                     <TableCell>
-                      <div className="flex items-center justify-center">
-                        {result.rank === 1 && <span className="text-yellow-500 mr-1">🥇</span>}
-                        {result.rank === 2 && <span className="text-gray-400 mr-1">🥈</span>}
-                        {result.rank === 3 && <span className="text-orange-600 mr-1">🥉</span>}
+                      <div className="flex items-center justify-center gap-1">
+                        {MEDAL_EMOJIS[result.rank as keyof typeof MEDAL_EMOJIS] && (
+                          <span>{MEDAL_EMOJIS[result.rank as keyof typeof MEDAL_EMOJIS]}</span>
+                        )}
                         <span className="font-semibold">{result.rank}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Link
-                        to={`/entity/${result.wallet_id}`}
-                        className="text-primary hover:text-primary/70"
-                      >
-                        {result.wallet_id.slice(0, 5)}...{result.wallet_id.slice(-5)}
-                      </Link>
+                      <WalletCell wallet={result.wallet_id} isZealyRegistered={result.is_zealy_registered} />
                     </TableCell>
                     <TableCell className="!text-right text-green-500 font-medium">
                       {formatAmount(result.buy_amount)}

@@ -16,7 +16,9 @@ export interface EpochTrade {
   trade_id: number;
   tx_hash: string;
   taker_wallet: string;
+  taker_is_zealy_registered: boolean;
   maker_wallet: string;
+  maker_is_zealy_registered: boolean;
   tickdate: string;
   price: string;
   quantity: string;
@@ -32,6 +34,7 @@ export interface EpochTradesResponse {
 export interface AirdropResult {
   rank: number;
   wallet_id: string;
+  is_zealy_registered: boolean;
   buy_amount: string;
   airdrop_amount: string;
 }
