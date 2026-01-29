@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ActivityType } from "../types";
 import EpochTrades from "./EpochTrades";
+import AirdropResults from "./AirdropResults";
 
 interface DisplaySectionProps {
   epoch: number;
@@ -23,6 +24,8 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => (
       <div className="mx-auto max-w-6xl h-full">
         {activity === "Trade" ? (
           <EpochTrades epoch={epoch} />
+        ) : activity === "Airdrop" ? (
+          <AirdropResults epoch={epoch} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
             <div className="rounded-lg border-2 border-dashed border-border p-6 md:p-10 bg-muted/10 w-full max-w-2xl">

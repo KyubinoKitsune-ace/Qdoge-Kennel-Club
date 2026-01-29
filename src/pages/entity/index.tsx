@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import OrderEntity from "./components/OrderEntity";
-import EntityTrades from "./components/EntityTransfers";
+import EntityTrades from "./components/EntityTrades";
 import EntityTransfers from "./components/EntityTransfers";
 import { Map, Copy } from "lucide-react";
 import { EXPLORER_URL } from "@/constants";

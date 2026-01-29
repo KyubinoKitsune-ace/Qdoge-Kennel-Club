@@ -27,6 +27,10 @@ services:
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       PYTHONUNBUFFERED: "1"
       CORS_ORIGINS: "http://localhost:5174,http://72.60.123.249:5174,http://72.60.123.249:82"
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      TRADE_UPDATE_INTERVAL: ${TRADE_UPDATE_INTERVAL:-300}
+      TRADE_ISSUER: ${TRADE_ISSUER}
+      TRADE_ASSET: ${TRADE_ASSET}
     volumes:
       - ./backend:/app
     ports:
