@@ -34,7 +34,7 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => {
             <h2 className="text-sm md:text-base font-semibold text-foreground">{activity} Details</h2>
             <p className="text-xs text-muted-foreground">Epoch {epoch}</p>
           </div>
-          {(activity === "Trade" || activity === "Transfer" || activity === "Airdrop") && (
+          {(activity === "Trades" || activity === "Transfers" || activity === "Airdrop") && (
             <div className="relative w-full max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -58,9 +58,9 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => {
       </div>
       <div className="flex-1 overflow-y-auto p-3 md:p-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <div className="mx-auto max-w-6xl h-full">
-          {activity === "Trade" ? (
+          {activity === "Trades" ? (
             <EpochTrades epoch={epoch} searchTerm={searchTerm} connectedWallet={connectedWallet} />
-          ) : activity === "Transfer" ? (
+          ) : activity === "Transfers" ? (
             <EpochTransfers epoch={epoch} searchTerm={searchTerm} connectedWallet={connectedWallet} />
           ) : activity === "Airdrop" ? (
             <AirdropResults epoch={epoch} searchTerm={searchTerm} connectedWallet={connectedWallet} />

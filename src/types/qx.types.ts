@@ -112,4 +112,3 @@ export type OrderRequest = {
   numberOfShares: number;
   pricePerShare: number;
 }
-
