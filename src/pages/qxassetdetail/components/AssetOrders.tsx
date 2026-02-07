@@ -88,6 +88,7 @@ const OrderModal: React.FC<{
 
     const handleSubmit = async () => {
         if (!connected) {
+            onOpenChange(false);
             toggleConnectModal();
             return;
         }

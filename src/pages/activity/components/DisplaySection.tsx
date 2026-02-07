@@ -4,9 +4,11 @@ import { ActivityType } from "../types";
 import EpochTrades from "./EpochTrades";
 import EpochTransfers from "./EpochTransfers";
 import AirdropResults from "./AirdropResults";
+import OrderbookCockpit from "./OrderbookCockpit";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 import { useQubicConnect } from "@/components/connect/QubicConnectContext";
+import { cn } from "@/utils";
 
 interface DisplaySectionProps {
   epoch: number;
@@ -26,12 +28,14 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-      className="flex flex-1 flex-col bg-background overflow-hidden relative z-0"
+      className="relative z-0 flex flex-1 min-h-0 flex-col overflow-hidden bg-background"
     >
       <div className="border-b border-border bg-muted/30 px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm md:text-base font-semibold text-foreground">{activity} Details</h2>
+            <h2 className="text-sm md:text-base font-semibold text-foreground">
+              {activity === "Orderbook" ? "Orderbook — QDOGE" : `${activity} Details`}
+            </h2>
             <p className="text-xs text-muted-foreground">Epoch {epoch}</p>
           </div>
           {(activity === "Trades" || activity === "Transfers" || activity === "Airdrop") && (
@@ -56,9 +60,18 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => {
           )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-        <div className="mx-auto max-w-6xl h-full">
-          {activity === "Trades" ? (
+      <div
+        className={cn(
+          "flex-1 min-h-0 p-3 md:p-4",
+          activity === "Orderbook"
+            ? "overflow-hidden"
+            : "overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
+        )}
+      >
+        <div className={activity === "Orderbook" ? "h-full min-h-0" : "mx-auto max-w-6xl h-full"}>
+          {activity === "Orderbook" ? (
+            <OrderbookCockpit />
+          ) : activity === "Trades" ? (
             <EpochTrades epoch={epoch} searchTerm={searchTerm} connectedWallet={connectedWallet} />
           ) : activity === "Transfers" ? (
             <EpochTransfers epoch={epoch} searchTerm={searchTerm} connectedWallet={connectedWallet} />

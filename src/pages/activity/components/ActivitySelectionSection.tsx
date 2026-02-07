@@ -8,7 +8,7 @@ interface ActivitySelectionSectionProps {
   onActivitySelect: (activity: ActivityType) => void;
 }
 
-const ACTIVITY_TYPES: ActivityType[] = ["Trades", "Transfers", "Airdrop","QTREATS","NFTS"];
+const ACTIVITY_TYPES: ActivityType[] = ["Orderbook", "Trades", "Transfers", "Airdrop","QTREATS","NFTS"];
 
 const ActivitySelectionSection: React.FC<ActivitySelectionSectionProps> = ({
   epoch, selectedActivity, onActivitySelect,

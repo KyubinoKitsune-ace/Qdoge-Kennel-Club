@@ -95,7 +95,7 @@ const Activity: React.FC = () => {
   }
 
   return (
-    <main className="relative isolate flex flex-col md:flex-row min-h-[calc(100vh-140px)] w-full bg-background overflow-hidden">
+    <main className="relative isolate flex h-[calc(100vh-140px)] w-full flex-col overflow-hidden bg-background md:flex-row">
       <EpochSelectionSection
         epochs={epochs}
         selectedEpoch={selectedEpoch}

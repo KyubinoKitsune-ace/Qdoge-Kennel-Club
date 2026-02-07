@@ -29,6 +29,49 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.3rem;
+
+    /* Orderbook (Activity) semantic tokens (aliases to existing theme vars) */
+    --ob-surface: var(--card);
+    --ob-surface-elevated: var(--popover);
+    --ob-surface-overlay: var(--accent);
+    --ob-border: var(--border);
+    --ob-divider: var(--border);
+    --ob-text: var(--foreground);
+    --ob-text-muted: var(--muted-foreground);
+
+    /* Bid/Ask semantics */
+    --ob-bid: var(--chart-2);
+    --ob-ask: var(--chart-1);
+    --ob-depth-bid-bg: var(--chart-2);
+    --ob-depth-ask-bg: var(--chart-1);
+
+    /* Liquidity Lens */
+    --ob-lens: var(--primary);
+    --ob-lens-soft: var(--accent);
+    --ob-lens-focus-ring: var(--ring);
+
+    /* Status */
+    --ob-success: var(--chart-2);
+    --ob-error: var(--destructive);
+    --ob-disabled: var(--muted);
+
+    /* Chart palette (must be token-driven for theme switching) */
+    --ob-chart-bg: var(--background);
+    --ob-chart-grid: var(--border);
+    --ob-chart-axis: var(--muted-foreground);
+    --ob-chart-crosshair: var(--primary);
+    --ob-chart-crosshair-label-bg: var(--primary);
+    --ob-chart-tooltip-bg: var(--popover);
+    --ob-chart-tooltip-fg: var(--popover-foreground);
+    --ob-chart-series-primary: var(--primary);
+    --ob-chart-series-secondary: var(--secondary);
+    --ob-chart-lens-line: var(--ob-lens);
+
+    /* Candles (tokenized) */
+    --ob-chart-candle-up: var(--ob-bid);
+    --ob-chart-candle-down: var(--ob-ask);
+    --ob-chart-candle-wick-up: var(--ob-bid);
+    --ob-chart-candle-wick-down: var(--ob-ask);
   }
 
   .dark {

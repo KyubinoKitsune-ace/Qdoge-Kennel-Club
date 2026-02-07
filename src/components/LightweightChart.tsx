@@ -1,7 +1,15 @@
 import { cn, getCssVariableAsRgb } from "@/utils";
-import type { ChartOptions, DeepPartial, IChartApi, ISeriesApi, SingleValueData, SolidColor } from "lightweight-charts";
-import { createChart, HistogramSeries, LineSeries, CrosshairMode, PriceScaleMode } from "lightweight-charts";
-import { useEffect, useRef, useState } from "react";
+import type {
+  CandlestickData,
+  ChartOptions,
+  DeepPartial,
+  IChartApi,
+  ISeriesApi,
+  SingleValueData,
+  SolidColor,
+} from "lightweight-charts";
+import { createChart, HistogramSeries, LineSeries, AreaSeries, CandlestickSeries, CrosshairMode, PriceScaleMode } from "lightweight-charts";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, LineChart, BarChart2, CandlestickChart } from "lucide-react";
 import { formatQubicAmount } from "@/utils";
 
@@ -10,6 +18,7 @@ type TimeFrame = "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
 
 type Props = Readonly<{
   priceDataSeries: SingleValueData[];
+  candleDataSeries?: CandlestickData[];
   volumeDataSeries: SingleValueData[];
   className?: string;
   title?: string;
@@ -18,8 +27,13 @@ type Props = Readonly<{
   onTimeFrameChange?: (timeFrame: TimeFrame) => void;
   onChartTypeChange?: (chartType: ChartType) => void;
   showControls?: boolean;
+  showTimeFrameControls?: boolean;
+  showChartTypeControls?: boolean;
   showTooltip?: boolean;
   theme?: "dark" | "light";
+  themeKey?: string;
+  lensPrice?: number;
+  selectedPrice?: number;
   HeaderComponent?: React.ReactElement;
 }>;
 
@@ -32,6 +46,7 @@ const chartTypeIcons = {
 
 export default function LightweightChart({
   priceDataSeries,
+  candleDataSeries,
   volumeDataSeries,
   className,
   title = "Price Chart",
@@ -40,166 +55,257 @@ export default function LightweightChart({
   onTimeFrameChange,
   onChartTypeChange,
   showControls = true,
+  showTimeFrameControls = showControls,
+  showChartTypeControls = showControls,
   showTooltip = true,
   theme = "dark",
+  themeKey,
+  lensPrice,
+  selectedPrice,
   HeaderComponent,
 }: Props) {
-  const [colors, setColors] = useState({
-    primaryColor: getCssVariableAsRgb("--primary"),
-    secondaryColor: getCssVariableAsRgb("--secondary"),
-    backgroundColor: getCssVariableAsRgb("--background"),
-    textColor: getCssVariableAsRgb("--foreground"),
-  });
-
-  // Create the chart instance
-  const CHART_OPTIONS: DeepPartial<ChartOptions> = {
-    layout: {
-      textColor: colors.textColor,
-      attributionLogo: false,
-      background: { type: "solid", color: colors.backgroundColor } as SolidColor,
-    },
-    rightPriceScale: { visible: true, borderVisible: false },
-    leftPriceScale: { visible: true, borderVisible: false },
-    grid: {
-      vertLines: {
-        color: "#2B3A4A",
-        style: 1,
-        visible: true,
-      },
-      horzLines: {
-        color: "#2B3A4A",
-        style: 1,
-        visible: true,
-      },
-    },
-    crosshair: {
-      mode: CrosshairMode.Normal,
-      vertLine: {
-        width: 1,
-        color: "#3b82f6",
-        style: 1,
-        labelBackgroundColor: "#3b82f6",
-      },
-      horzLine: {
-        width: 1,
-        color: "#3b82f6",
-        style: 1,
-        labelBackgroundColor: "#3b82f6",
-      },
-    },
-    timeScale: {
-      borderVisible: false,
-      timeVisible: true,
-      secondsVisible: false,
-    },
-  };
-
-  const LIGHT_THEME = {
-    layout: {
-      textColor: "#333",
-      background: { type: "solid", color: "#ffffff" } as SolidColor,
-    },
-    grid: {
-      vertLines: {
-        color: "#f0f0f0",
-      },
-      horzLines: {
-        color: "#f0f0f0",
-      },
-    },
-  };
-
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const priceSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const priceSeriesRef = useRef<ISeriesApi<"Line"> | ISeriesApi<"Area"> | ISeriesApi<"Candlestick"> | null>(null);
+  const glowSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const lensLineRef = useRef<ReturnType<ISeriesApi<"Line">["createPriceLine"]> | null>(null);
+  const selectedLineRef = useRef<ReturnType<ISeriesApi<"Line">["createPriceLine"]> | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [currentVolume, setCurrentVolume] = useState<number | null>(null);
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
   const [selectedChartType, setSelectedChartType] = useState<ChartType>("line");
-  const [priceChange, setPriceChange] = useState<number>(0);
   const [priceChangePercent, setPriceChangePercent] = useState<number>(0);
+
+  const effectiveThemeKey = themeKey ?? theme;
+
+  const chartTheme = useMemo(() => {
+    // Always derive from CSS variables so theme switching repaints the chart.
+    const backgroundColor = getCssVariableAsRgb("--ob-chart-bg");
+    const textColor = getCssVariableAsRgb("--ob-chart-axis");
+    const gridColor = getCssVariableAsRgb("--ob-chart-grid");
+    const crosshairColor = getCssVariableAsRgb("--ob-chart-crosshair");
+    const crosshairLabelBg = getCssVariableAsRgb("--ob-chart-crosshair-label-bg");
+    const seriesPrimary = getCssVariableAsRgb("--ob-chart-series-primary");
+    const seriesSecondary = getCssVariableAsRgb("--ob-chart-series-secondary");
+    const lensLineColor = getCssVariableAsRgb("--ob-chart-lens-line");
+    const candleUp = getCssVariableAsRgb("--ob-chart-candle-up");
+    const candleDown = getCssVariableAsRgb("--ob-chart-candle-down");
+    const candleWickUp = getCssVariableAsRgb("--ob-chart-candle-wick-up");
+    const candleWickDown = getCssVariableAsRgb("--ob-chart-candle-wick-down");
+
+    return {
+      backgroundColor,
+      textColor,
+      gridColor,
+      crosshairColor,
+      crosshairLabelBg,
+      seriesPrimary,
+      seriesSecondary,
+      lensLineColor,
+      candleUp,
+      candleDown,
+      candleWickUp,
+      candleWickDown,
+    };
+  }, [effectiveThemeKey]);
+
+  const withAlpha = (hex: string, alpha: number) => {
+    const h = hex.replace("#", "").trim();
+    const normalized = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const recreatePriceSeries = () => {
+    if (!chartRef.current) return;
+
+    // Remove any existing marker lines before series teardown.
+    if (priceSeriesRef.current) {
+      if (lensLineRef.current) {
+        (priceSeriesRef.current as any).removePriceLine(lensLineRef.current);
+        lensLineRef.current = null;
+      }
+      if (selectedLineRef.current) {
+        (priceSeriesRef.current as any).removePriceLine(selectedLineRef.current);
+        selectedLineRef.current = null;
+      }
+    }
+
+    if (glowSeriesRef.current) {
+      chartRef.current.removeSeries(glowSeriesRef.current);
+      glowSeriesRef.current = null;
+    }
+    if (priceSeriesRef.current) {
+      chartRef.current.removeSeries(priceSeriesRef.current);
+      priceSeriesRef.current = null;
+    }
+
+    if (selectedChartType === "line") {
+      // "Cool" glow line behind the main line.
+      const glow = chartRef.current.addSeries(LineSeries);
+      glow.applyOptions({
+        lineWidth: 4,
+        color: withAlpha(chartTheme.seriesPrimary, 0.18),
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      glowSeriesRef.current = glow;
+
+      const main = chartRef.current.addSeries(LineSeries);
+      main.applyOptions({
+        lineWidth: 2,
+        color: chartTheme.seriesPrimary,
+        priceFormat: { type: "price", precision: 1, minMove: 0.1 },
+        lastValueVisible: true,
+        priceLineVisible: true,
+        priceLineWidth: 1,
+        priceLineColor: chartTheme.seriesPrimary,
+        priceLineStyle: 2,
+      });
+      main.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+        mode: PriceScaleMode.Normal,
+      });
+      priceSeriesRef.current = main;
+
+      glow.setData(priceDataSeries);
+      main.setData(priceDataSeries);
+    } else if (selectedChartType === "area") {
+      const glow = chartRef.current.addSeries(LineSeries);
+      glow.applyOptions({
+        lineWidth: 4,
+        color: withAlpha(chartTheme.seriesPrimary, 0.16),
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      glowSeriesRef.current = glow;
+
+      const area = chartRef.current.addSeries(AreaSeries);
+      area.applyOptions({
+        lineWidth: 2,
+        lineColor: chartTheme.seriesPrimary,
+        topColor: withAlpha(chartTheme.seriesPrimary, 0.20),
+        bottomColor: withAlpha(chartTheme.seriesPrimary, 0.02),
+        priceFormat: { type: "price", precision: 1, minMove: 0.1 },
+        lastValueVisible: true,
+        priceLineVisible: true,
+      });
+      area.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+        mode: PriceScaleMode.Normal,
+      });
+      priceSeriesRef.current = area;
+
+      glow.setData(priceDataSeries);
+      area.setData(priceDataSeries);
+    } else {
+      const candle = chartRef.current.addSeries(CandlestickSeries);
+      candle.applyOptions({
+        upColor: chartTheme.candleUp,
+        downColor: chartTheme.candleDown,
+        wickUpColor: chartTheme.candleWickUp,
+        wickDownColor: chartTheme.candleWickDown,
+        borderUpColor: chartTheme.candleUp,
+        borderDownColor: chartTheme.candleDown,
+        priceFormat: { type: "price", precision: 1, minMove: 0.1 },
+      });
+      candle.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+        mode: PriceScaleMode.Normal,
+      });
+      priceSeriesRef.current = candle;
+      candle.setData(candleDataSeries ?? []);
+    }
+  };
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
-
-    setColors({
-      primaryColor: getCssVariableAsRgb("--primary"),
-      secondaryColor: getCssVariableAsRgb("--secondary"),
-      backgroundColor: getCssVariableAsRgb("--background"),
-      textColor: getCssVariableAsRgb("--foreground"),
-    });
+    if (chartRef.current) return;
 
     const container = chartContainerRef.current;
     const parentElement = container.parentElement;
 
-    // Get parent dimensions
     const width = parentElement?.offsetWidth || container.offsetWidth;
     const height = parentElement?.offsetHeight || container.offsetHeight;
 
-    const themeOptions = theme === "light" ? LIGHT_THEME : {};
+    const chartOptions: DeepPartial<ChartOptions> = {
+      layout: {
+        textColor: chartTheme.textColor,
+        attributionLogo: false,
+        background: { type: "solid", color: chartTheme.backgroundColor } as SolidColor,
+      },
+      rightPriceScale: { visible: true, borderVisible: false },
+      leftPriceScale: { visible: true, borderVisible: false },
+      grid: {
+        vertLines: { color: chartTheme.gridColor, style: 1, visible: true },
+        horzLines: { color: chartTheme.gridColor, style: 1, visible: true },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          width: 1,
+          color: chartTheme.crosshairColor,
+          style: 1,
+          labelBackgroundColor: chartTheme.crosshairLabelBg,
+        },
+        horzLine: {
+          width: 1,
+          color: chartTheme.crosshairColor,
+          style: 1,
+          labelBackgroundColor: chartTheme.crosshairLabelBg,
+        },
+      },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    };
 
-    const chart = createChart(container, {
-      ...CHART_OPTIONS,
-      ...themeOptions,
-      width,
-      height,
-    });
+    const chart = createChart(container, { ...chartOptions, width, height });
     chartRef.current = chart;
 
-    // Create price series
-    const priceSeries = chart.addSeries(LineSeries);
-    priceSeries.applyOptions({
-      lineWidth: 2,
-      color: colors.primaryColor,
-      priceFormat: { type: "price", precision: 1, minMove: 0.1 },
-      lastValueVisible: true,
-      priceLineVisible: true,
-      priceLineWidth: 1,
-      priceLineColor: colors.primaryColor,
-      priceLineStyle: 2,
-    });
-    priceSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.1, bottom: 0.2 },
-      mode: PriceScaleMode.Normal,
-    });
-    priceSeries.setData(priceDataSeries);
-    priceSeriesRef.current = priceSeries;
-
-    chartRef.current?.timeScale().fitContent();
-    chartRef.current?.timeScale().applyOptions({
-      minBarSpacing: 1,
-      fixLeftEdge: true,
-      fixRightEdge: true,
-      rightOffset: 0,
-    });
-
-    // Create volume series
     const volumeSeries = chart.addSeries(HistogramSeries);
     volumeSeries.applyOptions({
       priceFormat: { type: "volume" },
       priceScaleId: "left",
-      color: colors.secondaryColor,
+      color: chartTheme.seriesSecondary,
       base: 0,
     });
     volumeSeries.priceScale().applyOptions({
       scaleMargins: { top: 0.85, bottom: 0 },
       visible: true,
     });
-    volumeSeries.setData(volumeDataSeries);
     volumeSeriesRef.current = volumeSeries;
 
-    // Fit the content to the time scale
+    if (volumeDataSeries.length > 0) volumeSeries.setData(volumeDataSeries);
+    recreatePriceSeries();
     chart.timeScale().fitContent();
+    chart.timeScale().applyOptions({
+      minBarSpacing: 1,
+      fixLeftEdge: true,
+      fixRightEdge: true,
+      rightOffset: 0,
+    });
 
-    // Add crosshair move handler for tooltip
     if (showTooltip) {
       chart.subscribeCrosshairMove((param) => {
-        if (param.time) {
-          const price = param.seriesData.get(priceSeries);
+        const active = priceSeriesRef.current as any;
+        if (param.time && active) {
+          const pricePoint = param.seriesData.get(active);
           const volume = param.seriesData.get(volumeSeries);
-
-          if (price) setCurrentPrice(Number(price));
+          if (pricePoint) {
+            if (typeof pricePoint === "number") setCurrentPrice(Number(pricePoint));
+            else if ("value" in (pricePoint as object) && typeof (pricePoint as any).value === "number")
+              setCurrentPrice((pricePoint as any).value);
+            else if ("close" in (pricePoint as object) && typeof (pricePoint as any).close === "number")
+              setCurrentPrice((pricePoint as any).close);
+          }
           if (volume) setCurrentVolume(Number(volume));
         } else {
           setCurrentPrice(null);
@@ -208,34 +314,82 @@ export default function LightweightChart({
       });
     }
 
-    // Use ResizeObserver for responsiveness
     const resizeObserver = new ResizeObserver(() => {
       if (chartRef.current && parentElement) {
-        const newWidth = parentElement.offsetWidth;
-        const newHeight = parentElement.offsetHeight;
-        chartRef.current.resize(newWidth, newHeight);
-        chartRef.current.timeScale().fitContent();
+        chartRef.current.resize(parentElement.offsetWidth, parentElement.offsetHeight);
       }
     });
+    if (parentElement) resizeObserver.observe(parentElement);
 
-    if (parentElement) {
-      resizeObserver.observe(parentElement);
-    }
-
-    // eslint-disable-next-line consistent-return -- Cleanup
     return () => {
       chart.remove();
       chartRef.current = null;
+      priceSeriesRef.current = null;
+      glowSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      lensLineRef.current = null;
+      selectedLineRef.current = null;
       resizeObserver.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme]);
+  }, []);
+
+  // Token-driven theme updates (no recreate => no flicker).
+  useEffect(() => {
+    if (!chartRef.current || !volumeSeriesRef.current) return;
+
+    chartRef.current.applyOptions({
+      layout: {
+        textColor: chartTheme.textColor,
+        background: { type: "solid", color: chartTheme.backgroundColor } as SolidColor,
+      },
+      grid: {
+        vertLines: { color: chartTheme.gridColor },
+        horzLines: { color: chartTheme.gridColor },
+      },
+      crosshair: {
+        vertLine: { color: chartTheme.crosshairColor, labelBackgroundColor: chartTheme.crosshairLabelBg },
+        horzLine: { color: chartTheme.crosshairColor, labelBackgroundColor: chartTheme.crosshairLabelBg },
+      },
+    });
+
+    volumeSeriesRef.current.applyOptions({ color: chartTheme.seriesSecondary });
+
+    // Update series colors without re-creating series (avoid flicker).
+    if (selectedChartType === "line") {
+      glowSeriesRef.current?.applyOptions({
+        color: withAlpha(chartTheme.seriesPrimary, 0.18),
+      });
+      (priceSeriesRef.current as ISeriesApi<"Line"> | null)?.applyOptions({
+        color: chartTheme.seriesPrimary,
+        priceLineColor: chartTheme.seriesPrimary,
+      });
+    } else if (selectedChartType === "area") {
+      glowSeriesRef.current?.applyOptions({
+        color: withAlpha(chartTheme.seriesPrimary, 0.16),
+      });
+      (priceSeriesRef.current as ISeriesApi<"Area"> | null)?.applyOptions({
+        lineColor: chartTheme.seriesPrimary,
+        topColor: withAlpha(chartTheme.seriesPrimary, 0.20),
+        bottomColor: withAlpha(chartTheme.seriesPrimary, 0.02),
+      });
+    } else {
+      (priceSeriesRef.current as ISeriesApi<"Candlestick"> | null)?.applyOptions({
+        upColor: chartTheme.candleUp,
+        downColor: chartTheme.candleDown,
+        wickUpColor: chartTheme.candleWickUp,
+        wickDownColor: chartTheme.candleWickDown,
+        borderUpColor: chartTheme.candleUp,
+        borderDownColor: chartTheme.candleDown,
+      });
+    }
+  }, [chartTheme]);
 
   // Update price data series
   useEffect(() => {
-    if (priceSeriesRef.current && priceDataSeries.length > 0) {
-      priceSeriesRef.current.setData(priceDataSeries);
-      chartRef.current?.timeScale().fitContent();
+    if (selectedChartType !== "candle") {
+      if (glowSeriesRef.current && priceDataSeries.length > 0) glowSeriesRef.current.setData(priceDataSeries);
+      if (priceSeriesRef.current && priceDataSeries.length > 0) (priceSeriesRef.current as ISeriesApi<"Line">).setData(priceDataSeries);
 
       // Calculate price change
       if (priceDataSeries.length >= 2) {
@@ -244,19 +398,69 @@ export default function LightweightChart({
         const change = lastPrice - firstPrice;
         const changePercent = (change / firstPrice) * 100;
 
-        setPriceChange(change);
         setPriceChangePercent(changePercent);
       }
     }
-  }, [priceDataSeries]);
+  }, [priceDataSeries, selectedChartType]);
 
   // Update volume data series
   useEffect(() => {
     if (volumeSeriesRef.current && volumeDataSeries.length > 0) {
       volumeSeriesRef.current.setData(volumeDataSeries);
-      chartRef.current?.timeScale().fitContent();
     }
   }, [volumeDataSeries]);
+
+  useEffect(() => {
+    if (selectedChartType !== "candle") return;
+    if (!priceSeriesRef.current) return;
+    (priceSeriesRef.current as ISeriesApi<"Candlestick">).setData(candleDataSeries ?? []);
+  }, [candleDataSeries, selectedChartType]);
+
+  useEffect(() => {
+    recreatePriceSeries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChartType]);
+
+  // Liquidity Lens + selected marker lines
+  useEffect(() => {
+    const priceSeries = priceSeriesRef.current;
+    if (!priceSeries) return;
+
+    if (lensLineRef.current) {
+      priceSeries.removePriceLine(lensLineRef.current);
+      lensLineRef.current = null;
+    }
+    if (typeof lensPrice === "number" && Number.isFinite(lensPrice)) {
+      lensLineRef.current = (priceSeries as any).createPriceLine({
+        price: lensPrice,
+        color: chartTheme.lensLineColor,
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: "Lens",
+      });
+    }
+  }, [lensPrice, chartTheme.lensLineColor]);
+
+  useEffect(() => {
+    const priceSeries = priceSeriesRef.current;
+    if (!priceSeries) return;
+
+    if (selectedLineRef.current) {
+      priceSeries.removePriceLine(selectedLineRef.current);
+      selectedLineRef.current = null;
+    }
+    if (typeof selectedPrice === "number" && Number.isFinite(selectedPrice)) {
+      selectedLineRef.current = (priceSeries as any).createPriceLine({
+        price: selectedPrice,
+        color: chartTheme.seriesPrimary,
+        lineWidth: 1,
+        lineStyle: 3,
+        axisLabelVisible: true,
+        title: "Selected",
+      });
+    }
+  }, [selectedPrice, chartTheme.seriesPrimary]);
 
   // Handle time frame change
   const handleTimeFrameChange = (timeFrame: TimeFrame) => {
@@ -277,66 +481,85 @@ export default function LightweightChart({
   return (
     <div className={cn("relative flex h-full w-full flex-col", className)}>
       {/* Chart Header */}
-      <div className="flex items-center justify-center border-b border-gray-200 pb-2 pt-0 dark:border-gray-800">
-        <div className="flex flex-row items-center gap-1 justify-center">
-          <p className="text-lg font-bold">{title}</p>(
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-3 py-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <p className="truncate text-sm font-semibold text-foreground">{title}</p>
           <p className="text-xs text-muted-foreground">{symbol}</p>
-          <span className={cn("text-xs", priceChange >= 0 ? "text-green-500" : "text-red-500")}>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs text-muted-foreground">
             {priceChangePercent >= 0 ? "+" : ""}
             {priceChangePercent.toFixed(2)}%
-          </span>)
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">{HeaderComponent ? HeaderComponent : null}</div>
+        <div className="flex items-center gap-2">
+          {HeaderComponent ? HeaderComponent : null}
 
-        {showControls && (
-          <div className="flex gap-2">
-            <div className="flex border">
-              {(["5m", "15m", "1h", "4h", "1d", "1w"] as TimeFrame[]).map((tf) => (
-                <button
-                  key={tf}
-                  className={cn(
-                    "rounded-none px-2 py-1 text-xs",
-                    selectedTimeFrame === tf ? "bg-blue-500 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-800",
-                  )}
-                  onClick={() => handleTimeFrameChange(tf)}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
+          {(showTimeFrameControls || showChartTypeControls) && (
+            <div className="flex gap-2">
+              {showTimeFrameControls && (
+                <div className="flex overflow-hidden rounded-md border border-border">
+                  {(["5m", "15m", "1h", "4h", "1d", "1w"] as TimeFrame[]).map((tf) => (
+                    <button
+                      key={tf}
+                      className={cn(
+                        "px-2 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                        selectedTimeFrame === tf
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+                      )}
+                      onClick={() => handleTimeFrameChange(tf)}
+                      aria-label={`Select timeframe ${tf}`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <div className="flex rounded-md border">
-              {(["line", "area", "candle"] as ChartType[]).map((type) => (
-                <button
-                  key={type}
-                  className={cn(
-                    "flex items-center gap-1 rounded-none px-2 py-1 text-xs capitalize",
-                    selectedChartType === type ? "bg-blue-500 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-800",
-                  )}
-                  onClick={() => handleChartTypeChange(type)}
-                >
-                  {chartTypeIcons[type]}
-                  <span>{type}</span>
-                </button>
-              ))}
+              {showChartTypeControls && (
+                <div className="flex overflow-hidden rounded-md border border-border">
+                  {(["line", "area", "candle"] as ChartType[]).map((type) => (
+                    <button
+                      key={type}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-1 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                        selectedChartType === type
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+                      )}
+                      onClick={() => handleChartTypeChange(type)}
+                      aria-label={`Select chart type ${type}`}
+                    >
+                      {chartTypeIcons[type]}
+                      <span className="hidden sm:inline">{type}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Chart Container */}
-      <div className="relative flex-1 border-b border-gray-200 dark:border-gray-800">
+      <div className="relative flex-1 border-b border-border">
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
         {showTooltip && currentPrice && (
-          <div className="absolute right-3 top-3 z-10 rounded bg-gray-800 p-2 text-xs text-white">
-            <div>Price: {formatQubicAmount(currentPrice)}</div>
-            {currentVolume && <div>Volume: {currentVolume.toLocaleString()}</div>}
+          <div className="absolute right-3 top-3 z-10 rounded-md border border-border bg-popover p-2 text-xs text-popover-foreground shadow-sm">
+            <div className="text-muted-foreground">Price</div>
+            <div className="font-mono text-foreground">{formatQubicAmount(currentPrice)}</div>
+            {currentVolume && (
+              <div className="mt-1">
+                <div className="text-muted-foreground">Volume</div>
+                <div className="font-mono text-foreground">{currentVolume.toLocaleString()}</div>
+              </div>
+            )}
           </div>
         )}
 

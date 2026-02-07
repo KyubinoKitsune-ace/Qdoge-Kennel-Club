@@ -56,6 +56,30 @@ export function getCssVariable(variableName: string): string {
   return rootStyle.getPropertyValue(variableName).trim();
 }
 
+function resolveCssVariableValue(variableName: string, depth = 0): string {
+  if (depth > 10) {
+    throw new Error(`CSS variable resolution exceeded max depth for ${variableName}`);
+  }
+
+  const raw = getCssVariable(variableName).trim();
+
+  // Custom properties return the specified text, so support alias tokens like:
+  // --ob-chart-grid: var(--border);
+  if (raw.startsWith("var(") && raw.endsWith(")")) {
+    const inner = raw.slice(4, -1).trim();
+    const commaIdx = inner.indexOf(",");
+    const ref = (commaIdx === -1 ? inner : inner.slice(0, commaIdx)).trim();
+    const fallback = (commaIdx === -1 ? "" : inner.slice(commaIdx + 1)).trim();
+
+    if (ref.startsWith("--")) {
+      return resolveCssVariableValue(ref, depth + 1);
+    }
+    if (fallback) return fallback;
+  }
+
+  return raw;
+}
+
 function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
   h = h % 360; // Ensure hue is within 0-359
   s = s / 100; // Convert saturation to a decimal
@@ -123,7 +147,7 @@ function convertHslToHex(hslString: string): string {
 }
 
 export function getCssVariableAsRgb(variableName: string): string {
-  const hslValue = getCssVariable(variableName);
+  const hslValue = resolveCssVariableValue(variableName);
   const rgbValue = convertHslToHex(hslValue);
   return rgbValue;
 }
