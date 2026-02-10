@@ -628,10 +628,10 @@ export default function OrderbookCockpit({ asset: assetProp }: OrderbookCockpitP
     <section className="flex h-full min-h-0 w-full flex-col">
       {/* Desktop cockpit */}
       <div className="hidden h-full min-h-0 w-full grid-cols-12 gap-3 lg:grid">
-        <div className="col-span-4 min-h-0 overflow-hidden rounded-lg border border-border bg-card/40 shadow-sm">
+        <div className="col-span-3 min-h-0 overflow-hidden rounded-lg border border-border bg-card/40 shadow-sm">
           {ladder}
         </div>
-        <div className="col-span-5 min-h-0 overflow-hidden rounded-lg border border-border bg-card/40 shadow-sm">
+        <div className="col-span-6 min-h-0 overflow-hidden rounded-lg border border-border bg-card/40 shadow-sm">
           {chartPanel}
         </div>
         <div className="col-span-3 min-h-0 overflow-hidden rounded-lg border border-border bg-card/40 shadow-sm">

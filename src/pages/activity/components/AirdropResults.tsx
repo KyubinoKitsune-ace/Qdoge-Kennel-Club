@@ -171,7 +171,8 @@ const AirdropResults: React.FC<AirdropResultsProps> = ({ epoch, searchTerm = "",
       {/* Live Preview Disclaimer */}
       {isPreview && (
         <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-600 dark:text-yellow-500">
-          ⚠️ This is a live preview and does not reflect the final list. Changes may be made before the final distribution.
+          ⚠️ This is a live preview and does not reflect the final list. Changes may be made before the final distribution. <br />
+          ✅  - Zealy Registered
         </div>
       )}
 
