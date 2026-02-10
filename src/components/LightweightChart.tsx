@@ -81,34 +81,26 @@ export default function LightweightChart({
   const effectiveThemeKey = themeKey ?? theme;
 
   const chartTheme = useMemo(() => {
-    // Always derive from CSS variables so theme switching repaints the chart.
-    const backgroundColor = getCssVariableAsRgb("--ob-chart-bg");
-    const textColor = getCssVariableAsRgb("--ob-chart-axis");
-    const gridColor = getCssVariableAsRgb("--ob-chart-grid");
-    const crosshairColor = getCssVariableAsRgb("--ob-chart-crosshair");
-    const crosshairLabelBg = getCssVariableAsRgb("--ob-chart-crosshair-label-bg");
-    const seriesPrimary = getCssVariableAsRgb("--ob-chart-series-primary");
-    const seriesSecondary = getCssVariableAsRgb("--ob-chart-series-secondary");
-    const lensLineColor = getCssVariableAsRgb("--ob-chart-lens-line");
-    const candleUp = getCssVariableAsRgb("--ob-chart-candle-up");
-    const candleDown = getCssVariableAsRgb("--ob-chart-candle-down");
-    const candleWickUp = getCssVariableAsRgb("--ob-chart-candle-wick-up");
-    const candleWickDown = getCssVariableAsRgb("--ob-chart-candle-wick-down");
+    // Defer reading CSS variables by one frame so the DOM has applied the new
+    // theme class before we sample computed styles.  The memo itself is
+    // intentionally re-created whenever effectiveThemeKey changes.
+    const read = () => ({
+      backgroundColor: getCssVariableAsRgb("--ob-chart-bg"),
+      textColor: getCssVariableAsRgb("--ob-chart-axis"),
+      gridColor: getCssVariableAsRgb("--ob-chart-grid"),
+      crosshairColor: getCssVariableAsRgb("--ob-chart-crosshair"),
+      crosshairLabelBg: getCssVariableAsRgb("--ob-chart-crosshair-label-bg"),
+      seriesPrimary: getCssVariableAsRgb("--ob-chart-series-primary"),
+      seriesSecondary: getCssVariableAsRgb("--ob-chart-series-secondary"),
+      lensLineColor: getCssVariableAsRgb("--ob-chart-lens-line"),
+      candleUp: getCssVariableAsRgb("--ob-chart-candle-up"),
+      candleDown: getCssVariableAsRgb("--ob-chart-candle-down"),
+      candleWickUp: getCssVariableAsRgb("--ob-chart-candle-wick-up"),
+      candleWickDown: getCssVariableAsRgb("--ob-chart-candle-wick-down"),
+    });
 
-    return {
-      backgroundColor,
-      textColor,
-      gridColor,
-      crosshairColor,
-      crosshairLabelBg,
-      seriesPrimary,
-      seriesSecondary,
-      lensLineColor,
-      candleUp,
-      candleDown,
-      candleWickUp,
-      candleWickDown,
-    };
+    return read();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveThemeKey]);
 
   const withAlpha = (hex: string, alpha: number) => {
@@ -299,7 +291,7 @@ export default function LightweightChart({
         const active = priceSeriesRef.current as any;
         if (param.time && active) {
           const pricePoint = param.seriesData.get(active);
-          const volume = param.seriesData.get(volumeSeries);
+          const volumePoint = param.seriesData.get(volumeSeries);
           if (pricePoint) {
             if (typeof pricePoint === "number") setCurrentPrice(Number(pricePoint));
             else if ("value" in (pricePoint as object) && typeof (pricePoint as any).value === "number")
@@ -307,7 +299,11 @@ export default function LightweightChart({
             else if ("close" in (pricePoint as object) && typeof (pricePoint as any).close === "number")
               setCurrentPrice((pricePoint as any).close);
           }
-          if (volume) setCurrentVolume(Number(volume));
+          if (volumePoint && typeof volumePoint === "object" && "value" in (volumePoint as object)) {
+            setCurrentVolume((volumePoint as any).value);
+          } else {
+            setCurrentVolume(null);
+          }
         } else {
           setCurrentPrice(null);
           setCurrentVolume(null);
@@ -323,6 +319,7 @@ export default function LightweightChart({
     if (parentElement) resizeObserver.observe(parentElement);
 
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       priceSeriesRef.current = null;
@@ -331,7 +328,6 @@ export default function LightweightChart({
       lensLineRef.current = null;
       selectedLineRef.current = null;
       setIsChartReady(false);
-      resizeObserver.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -398,16 +394,25 @@ export default function LightweightChart({
   useEffect(() => {
     if (selectedChartType !== "candle") {
       if (glowSeriesRef.current && priceDataSeries.length > 0) glowSeriesRef.current.setData(priceDataSeries);
-      if (priceSeriesRef.current && priceDataSeries.length > 0) (priceSeriesRef.current as ISeriesApi<"Line">).setData(priceDataSeries);
+      if (priceSeriesRef.current && priceDataSeries.length > 0) {
+        if (selectedChartType === "area") {
+          (priceSeriesRef.current as ISeriesApi<"Area">).setData(priceDataSeries);
+        } else {
+          (priceSeriesRef.current as ISeriesApi<"Line">).setData(priceDataSeries);
+        }
+      }
 
       // Calculate price change
       if (priceDataSeries.length >= 2) {
         const firstPrice = priceDataSeries[0].value;
         const lastPrice = priceDataSeries[priceDataSeries.length - 1].value;
-        const change = lastPrice - firstPrice;
-        const changePercent = (change / firstPrice) * 100;
-
-        setPriceChangePercent(changePercent);
+        if (firstPrice !== 0) {
+          const change = lastPrice - firstPrice;
+          const changePercent = (change / firstPrice) * 100;
+          setPriceChangePercent(changePercent);
+        } else {
+          setPriceChangePercent(0);
+        }
       }
     }
   }, [priceDataSeries, selectedChartType]);

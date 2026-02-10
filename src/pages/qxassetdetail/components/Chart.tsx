@@ -26,7 +26,6 @@ const Chart: React.FC<
   const [candleData, setCandleData] = useState<CandlestickData[]>([]);
   const [volumeData, setVolumeData] = useState<SingleValueData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>("1h");
   const [, setChartType] = useState<ChartType>("line");
   const [settings] = useAtom(settingsAtom);
 
@@ -53,7 +52,7 @@ const Chart: React.FC<
 
         const candles: CandlestickData[] =
           res?.map((v, i) => {
-            const prev = res?.[Math.max(0, i - 1)];
+            const prev = i > 0 ? res?.[i - 1] : undefined;
             const open = prev?.averagePrice ?? v.averagePrice;
             const close = v.averagePrice;
             const high = v.max ?? Math.max(open, close);
@@ -75,10 +74,11 @@ const Chart: React.FC<
     };
 
     fetchData();
-  }, [asset, timeFrame]);
+  }, [issuer, asset]);
 
-  const handleTimeFrameChange = (newTimeFrame: TimeFrame) => {
-    setTimeFrame(newTimeFrame);
+  const handleTimeFrameChange = (_newTimeFrame: TimeFrame) => {
+    // TimeFrame selection is currently a no-op — the API does not support
+    // a timeframe parameter yet.  Kept as a placeholder for future use.
   };
 
   const handleChartTypeChange = (newChartType: ChartType) => {
