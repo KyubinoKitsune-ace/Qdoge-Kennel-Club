@@ -14,7 +14,7 @@ const useRPCFetcher = () => {
   const [, setBalance] = useAtom(balancesAtom);
   const { wallet } = useQubicConnect();
 
-  // Fetch tick info every 2 seconds
+  // Fetch tick info every 10 seconds
   useEffect(() => {
     intervalRef.current = setInterval(async () => {
       const data = await fetchTickInfo();
@@ -22,7 +22,7 @@ const useRPCFetcher = () => {
         setTickInfo(data);
         epoch.current = data.epoch;
       }
-    }, 4000);
+    }, 10000);
 
     return () => clearInterval(intervalRef.current!);
   }, [setTickInfo]);

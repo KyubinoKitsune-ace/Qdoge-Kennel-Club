@@ -15,18 +15,20 @@ const useAPIFetcher = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const assets = await fetchAssets();
-      const balance = await fetchOwnedAssets(
-        wallet?.publicKey || "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFXIB",
+      const [assets, balance] = await Promise.all([
+        fetchAssets(),
+        fetchOwnedAssets(
+          wallet?.publicKey || "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFXIB",
+        ),
+      ]);
+      const balanceMap = new Map(
+        balance.map((data: { asset: string; amount: string }) => [data.asset, data.amount]),
       );
       setAssets(
-        assets.map((asset) => {
-          const matchingBalance = balance.filter((data: { asset: string; amount: string; issuerId: string; unitOfMeasurement: string }) => data.asset === asset.name)
-          return {
-            ...asset,
-            balance: matchingBalance?.[0]?.amount || 0
-          }
-        }),
+        assets.map((asset) => ({
+          ...asset,
+          balance: Number(balanceMap.get(asset.name)) || 0,
+        })),
       );
     };
     fetchData();
