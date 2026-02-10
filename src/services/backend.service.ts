@@ -37,17 +37,22 @@ export interface AirdropResult {
   is_zealy_registered: boolean;
   buy_amount: string;
   token_amount: string;
+  trade_result: string;
+  send_transfer_amount: string;
+  total_balance: string;
   airdrop_amount: string;
 }
 
 export interface AirdropResultsResponse {
   epoch_num: number;
+  threshold: string;
   results: AirdropResult[];
 }
 
 export interface AirdropPreviewResponse {
   epoch_num: number;
   total_airdrop: string;
+  threshold: string;
   distributed: number;
   is_ongoing: boolean;
   preview: boolean;
