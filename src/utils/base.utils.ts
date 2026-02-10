@@ -8,7 +8,7 @@ export const formatQubicAmount = (amount: number, seperator = ",") => {
   return amount
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, seperator)
-    .replace(".0", "");
+    .replace(/\.0$/, "");
 };
 
 export const truncateMiddle = (str: string, charsToRemove: number) => {
