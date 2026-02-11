@@ -38,13 +38,13 @@ const Chart: React.FC<
         const avgPriceData: SingleValueData[] =
           res?.map((v) => ({
             value: v.averagePrice,
-            time: v.time as Time,
+            time: v.time.split("T")[0] as Time,
           })) ?? [];
 
         const histogramVolumeData: SingleValueData[] =
           res?.map((v) => ({
             value: v.totalAmount,
-            time: v.time as Time,
+            time: v.time.split("T")[0] as Time,
           })) ?? [];
 
         setPriceData(avgPriceData);

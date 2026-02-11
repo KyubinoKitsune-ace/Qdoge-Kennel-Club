@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAtom } from "jotai";
 import { notificationsAtom } from "@/store/notifications";
@@ -26,16 +26,16 @@ export function useSocketIO({
   const [isConnected, setIsConnected] = useState(false);
   const [, setNotifications] = useAtom(notificationsAtom);
   const socketRef = useRef<Socket | null>(null);
+  const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
 
   useEffect(() => {
-    // Create socket instance
     const socket = io(url, {
       autoConnect,
       reconnectionAttempts,
       reconnectionDelay,
+      path: "/socket.io",
     });
 
-    // Set up event listeners
     socket.on("connect", () => {
       setIsConnected(true);
       console.log("Socket connected:", socket.id);
@@ -55,64 +55,76 @@ export function useSocketIO({
 
     // Listen for notifications
     socket.on("notification", (notification) => {
-      console.log("Received notification:", notification);
-
-      // Add notification to store
       setNotifications((prev) => [notification, ...prev]);
-
-      // Show toast notification
-      notification.type === "error" ? toast.error(notification.message) : toast.success(notification.message);
+      notification.type === "error"
+        ? toast.error(notification.message)
+        : toast.success(notification.message);
     });
 
     // Listen for trade updates
     socket.on("trade_update", (trade) => {
-      console.log("Received trade update:", trade);
-
-      // Show toast notification for trade updates
       trade.status === "completed"
         ? toast.success(`Trade ${trade.id} completed`)
         : toast.error(`Trade ${trade.id} failed`);
     });
 
-    // Store socket reference
+    // Forward all events to registered listeners (supported API; avoids private internals)
+    const onAnyHandler = (event: string, ...args: unknown[]) => {
+      const data = args[0];
+      const handlers = listenersRef.current.get(event);
+      if (handlers) {
+        handlers.forEach((handler) => handler(data));
+      }
+    };
+    socket.onAny(onAnyHandler);
+
     socketRef.current = socket;
 
-    // Clean up on unmount
     return () => {
       if (socket) {
+        socket.offAny(onAnyHandler);
         socket.disconnect();
         socket.off();
       }
     };
   }, [url, autoConnect, reconnectionAttempts, reconnectionDelay, onConnect, onDisconnect, onError, setNotifications]);
 
-  // Function to emit events
-  const emit = (event: string, data?: any) => {
-    if (socketRef.current && isConnected) {
+  const emit = useCallback((event: string, data?: any) => {
+    if (socketRef.current?.connected) {
       socketRef.current.emit(event, data);
       return true;
     }
     return false;
-  };
+  }, []);
 
-  // Function to manually connect
-  const connect = () => {
-    if (socketRef.current && !isConnected) {
+  const on = useCallback((event: string, handler: (data: any) => void) => {
+    if (!listenersRef.current.has(event)) {
+      listenersRef.current.set(event, new Set());
+    }
+    listenersRef.current.get(event)!.add(handler);
+
+    return () => {
+      listenersRef.current.get(event)?.delete(handler);
+    };
+  }, []);
+
+  const connect = useCallback(() => {
+    if (socketRef.current && !socketRef.current.connected) {
       socketRef.current.connect();
     }
-  };
+  }, []);
 
-  // Function to manually disconnect
-  const disconnect = () => {
-    if (socketRef.current && isConnected) {
+  const disconnect = useCallback(() => {
+    if (socketRef.current?.connected) {
       socketRef.current.disconnect();
     }
-  };
+  }, []);
 
   return {
     isConnected,
     socket: socketRef.current,
     emit,
+    on,
     connect,
     disconnect,
   };

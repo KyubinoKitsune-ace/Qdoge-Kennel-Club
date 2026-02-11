@@ -8,7 +8,8 @@ import { useEffect } from "react";
 import { useQubicConnect } from "@/components/connect/QubicConnectContext";
 import { MetaMaskContext } from "@/components/connect/MetamaskContext";
 import useGlobalTxMonitor from "@/hooks/useGlobalTxMonitor";
-import { useNotificationSocket } from "@/hooks/useNotificationSocket";
+// import { useNotificationSocket } from "@/hooks/useNotificationSocket";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 const Layout: React.FC = () => {
   const [state] = useContext(MetaMaskContext);
@@ -16,7 +17,8 @@ const Layout: React.FC = () => {
   useRPCFetcher();
   useAPIFetcher();
   useGlobalTxMonitor();
-  useNotificationSocket();
+  // useNotificationSocket();
+  useRealtimeUpdates();
 
   useEffect(() => {
     const storedWallet = localStorage.getItem("wallet");

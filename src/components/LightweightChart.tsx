@@ -552,7 +552,7 @@ export default function LightweightChart({
       </div>
 
       {/* Chart Container */}
-      <div className="relative flex-1 border-b border-border">
+      <div className="relative flex-1 border-b border-border min-h-200px">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -575,7 +575,6 @@ export default function LightweightChart({
         <div
           ref={chartContainerRef}
           className="h-full w-full"
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </div>
     </div>
