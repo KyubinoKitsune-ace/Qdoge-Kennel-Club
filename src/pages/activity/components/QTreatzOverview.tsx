@@ -87,7 +87,7 @@ export default function QTreatzOverview() {
         </Card>
       </div>
 
-      <Card className="min-h-0 flex-1 border-border/80 bg-card/95 shadow-sm">
+      <Card className="border-border/80 bg-card/95 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-sm">All Assets In QTREATZ Wallet</CardTitle>
@@ -95,7 +95,7 @@ export default function QTreatzOverview() {
           </div>
           <Separator className="mt-2" />
         </CardHeader>
-        <CardContent className="min-h-0">
+        <CardContent>
           <Table
             wrapperClassName="max-h-[420px] rounded-md border border-border/60"
             className="table-auto [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"
