@@ -26,7 +26,7 @@ export function useSocketIO({
   const [isConnected, setIsConnected] = useState(false);
   const [, setNotifications] = useAtom(notificationsAtom);
   const socketRef = useRef<Socket | null>(null);
-  const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
+  const listenersRef = useRef<Map<string, Set<(data: unknown) => void>>>(new Map());
 
   useEffect(() => {
     const socket = io(url, {
@@ -56,16 +56,20 @@ export function useSocketIO({
     // Listen for notifications
     socket.on("notification", (notification) => {
       setNotifications((prev) => [notification, ...prev]);
-      notification.type === "error"
-        ? toast.error(notification.message)
-        : toast.success(notification.message);
+      if (notification.type === "error") {
+        toast.error(notification.message);
+      } else {
+        toast.success(notification.message);
+      }
     });
 
     // Listen for trade updates
     socket.on("trade_update", (trade) => {
-      trade.status === "completed"
-        ? toast.success(`Trade ${trade.id} completed`)
-        : toast.error(`Trade ${trade.id} failed`);
+      if (trade.status === "completed") {
+        toast.success(`Trade ${trade.id} completed`);
+      } else {
+        toast.error(`Trade ${trade.id} failed`);
+      }
     });
 
     // Forward all events to registered listeners (supported API; avoids private internals)
@@ -89,7 +93,7 @@ export function useSocketIO({
     };
   }, [url, autoConnect, reconnectionAttempts, reconnectionDelay, onConnect, onDisconnect, onError, setNotifications]);
 
-  const emit = useCallback((event: string, data?: any) => {
+  const emit = useCallback((event: string, data?: unknown) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, data);
       return true;
@@ -97,7 +101,7 @@ export function useSocketIO({
     return false;
   }, []);
 
-  const on = useCallback((event: string, handler: (data: any) => void) => {
+  const on = useCallback((event: string, handler: (data: unknown) => void) => {
     if (!listenersRef.current.has(event)) {
       listenersRef.current.set(event, new Set());
     }

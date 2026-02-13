@@ -6,6 +6,16 @@ echo "Restarting Backend with New Config"
 echo "=========================================="
 echo ""
 
+# Enforce preflight checks before restart/rebuild actions.
+if [ ! -f "./scripts/check.sh" ]; then
+    echo "❌ scripts/check.sh not found"
+    exit 1
+fi
+
+echo "Running preflight checks..."
+bash ./scripts/check.sh
+echo ""
+
 # Check if .env exists
 if [ ! -f ".env" ]; then
     echo "❌ .env file not found in root directory!"
@@ -38,12 +48,12 @@ echo ""
 
 # Stop and remove the backend container
 echo "Stopping backend container..."
-docker-compose -f $COMPOSE_FILE stop backend
-docker-compose -f $COMPOSE_FILE rm -f backend
+docker compose -f $COMPOSE_FILE stop backend
+docker compose -f $COMPOSE_FILE rm -f backend
 
 echo ""
 echo "Starting backend container with new environment..."
-docker-compose -f $COMPOSE_FILE up -d backend
+docker compose -f $COMPOSE_FILE up -d backend
 
 echo ""
 echo "Waiting for backend to start..."

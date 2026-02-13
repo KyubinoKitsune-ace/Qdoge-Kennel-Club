@@ -29,12 +29,11 @@ const useGlobalTxMonitor = () => {
           if (success) {
             onSuccess();
             stopMonitoring(taskId);
-          } else {
           }
         });
       }
     });
-  }, [tickInfo, isMonitoring, monitoringTasks]);
+  }, [tickInfo, isMonitoring, monitoringTasks, stopMonitoring]);
 
   useEffect(() => {
     if (!isMonitoring) return;

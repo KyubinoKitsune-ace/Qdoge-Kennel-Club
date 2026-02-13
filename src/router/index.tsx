@@ -8,6 +8,7 @@ import Transactions from "@/pages/transactions";
 import QXAssets from "@/pages/qxassets";
 import QXAssetDetail from "@/pages/qxassetdetail";
 import Activity from "@/pages/activity";
+import AdminPage from "@/pages/admin";
 import { createBrowserRouter } from "react-router-dom";
 
 const router = createBrowserRouter([
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: "/activity",
         element: <Activity />,
+      },
+      {
+        path: "/admin",
+        element: <AdminPage />,
       }
     ],
   },

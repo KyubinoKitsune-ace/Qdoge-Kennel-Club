@@ -11,7 +11,7 @@
 # - Reverse Proxy (Nginx)
 # ============================================================================
 
-set -e
+set -Eeuo pipefail
 
 # Configuration
 VPS_HOST="root@72.60.123.249"
@@ -52,7 +52,11 @@ fi
 # Create SSL directory
 mkdir -p nginx/ssl
 
-# Pull latest images and rebuild
+# Preflight gate before any rebuild/restart
+echo "Running preflight checks on VPS..."
+bash ./scripts/check.sh
+
+# Pull latest images and rebuild only after checks pass
 docker compose down --remove-orphans || true
 docker compose build --no-cache
 docker compose up -d

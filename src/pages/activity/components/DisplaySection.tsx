@@ -40,10 +40,13 @@ const DisplaySection: React.FC<DisplaySectionProps> = ({ epoch, activity }) => {
           <div className="ml-7">
             {activity === "Orderbook" ? (
               <Tabs value={orderbookAsset} onValueChange={(v) => setOrderbookAsset(v as OrderbookAsset)}>
-                Orderbook - 
+                Orderbook -
                 <TabsList>
-                  <TabsTrigger value="QDOGE">QDOGE</TabsTrigger>
-                  <TabsTrigger value="QTREAT">QTREAT</TabsTrigger>
+                  {ORDERBOOK_ASSETS.map((asset) => (
+                    <TabsTrigger key={asset} value={asset}>
+                      {asset}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </Tabs>
             ) : (

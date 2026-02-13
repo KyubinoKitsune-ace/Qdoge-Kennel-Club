@@ -3,19 +3,17 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FiBell, FiSettings, FiX, FiShield } from "react-icons/fi";
+import { FiBell, FiSettings, FiX } from "react-icons/fi";
 import { BiHistory } from "react-icons/bi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { MdOutlineShoppingCart, MdOutlineReceiptLong } from "react-icons/md";
 import { useQubicConnect } from "@/components/connect/QubicConnectContext";
 import { fetchEntityAskOrders, fetchEntityBidOrders } from "@/services/api.service";
-import { fetchUserInfo } from "@/services/backend.service";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AccountStatus from "./AccountStatus";
 import { EntityOrder } from "@/types";
 import UserTradeHistory from "./UserTradeHistory";
 import SettingPanel from "./SettingPanel";
-import AdminPanel from "./AdminPanel";
 import usePlaceOrder from "@/hooks/usePlaceOrder";
 
 const UserNormal: React.FC = () => {
@@ -24,27 +22,9 @@ const UserNormal: React.FC = () => {
   const [askOrders, setAskOrders] = useState<EntityOrder[]>([]);
   const [bidOrders, setBidOrders] = useState<EntityOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { placeOrder } = usePlaceOrder();
 
   const address = wallet?.publicKey;
-
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!address) {
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        const userInfo = await fetchUserInfo(address);
-        setIsAdmin(userInfo.role === "admin");
-      } catch {
-        setIsAdmin(false);
-      }
-    };
-    checkAdminRole();
-  }, [address]);
 
   useEffect(() => {
     if (!address) return;
@@ -147,7 +127,7 @@ const UserNormal: React.FC = () => {
 
         <CardContent className="p-4">
           <Tabs defaultValue="settings" onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`mb-8 grid w-full gap-2 rounded-lg p-1 ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
+            <TabsList className="mb-8 grid w-full grid-cols-2 gap-2 rounded-lg p-1">
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <FiSettings className="h-4 w-4" />
                 Settings
@@ -156,12 +136,6 @@ const UserNormal: React.FC = () => {
                 <BiHistory className="h-4 w-4" />
                 Activity
               </TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="admin" className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500">
-                  <FiShield className="h-4 w-4" />
-                  Admin
-                </TabsTrigger>
-              )}
             </TabsList>
 
             <TabsContent value="settings" className="space-y-8">
@@ -173,7 +147,7 @@ const UserNormal: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <SettingPanel />
+                  <SettingPanel connectedWallet={address || ""} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -210,11 +184,6 @@ const UserNormal: React.FC = () => {
               )}
             </TabsContent>
 
-            {isAdmin && (
-              <TabsContent value="admin" className="space-y-6">
-                <AdminPanel />
-              </TabsContent>
-            )}
           </Tabs>
         </CardContent>
       </Card>

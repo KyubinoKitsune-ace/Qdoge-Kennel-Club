@@ -22,8 +22,7 @@ type Level = {
   depthPct: number; // 0..1
 };
 
-const ASSETS = ["QDOGE", "QTREAT"] as const;
-type Asset = (typeof ASSETS)[number];
+type Asset = "QDOGE" | "QTREAT";
 const DEFAULT_ASSET: Asset = "QDOGE";
 const DEFAULT_LEVELS_PER_SIDE = 24;
 
@@ -66,20 +65,26 @@ function useMediaQuery(query: string) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia(query);
+    const legacyMql = mql as MediaQueryList & {
+      addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+    };
     const onChange = () => setMatches(mql.matches);
     onChange();
 
-    // Safari <14 uses addListener/removeListener
-    // eslint-disable-next-line deprecation/deprecation
-    if (mql.addEventListener) mql.addEventListener("change", onChange);
-    // eslint-disable-next-line deprecation/deprecation
-    else mql.addListener(onChange);
+    // Safari <14 uses addListener/removeListener.
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", onChange);
+    } else if (typeof legacyMql.addListener === "function") {
+      legacyMql.addListener(onChange);
+    }
 
     return () => {
-      // eslint-disable-next-line deprecation/deprecation
-      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
-      // eslint-disable-next-line deprecation/deprecation
-      else mql.removeListener(onChange);
+      if (typeof mql.removeEventListener === "function") {
+        mql.removeEventListener("change", onChange);
+      } else if (typeof legacyMql.removeListener === "function") {
+        legacyMql.removeListener(onChange);
+      }
     };
   }, [query]);
 
@@ -134,7 +139,7 @@ export default function OrderbookCockpit({ asset: assetProp }: OrderbookCockpitP
         setAsksRaw(asks ?? []);
         setBidsRaw(bids ?? []);
         setLoadingBook(false);
-      } catch (e) {
+      } catch {
         if (cancelled) return;
         setLoadingBook(false);
       }
@@ -147,7 +152,7 @@ export default function OrderbookCockpit({ asset: assetProp }: OrderbookCockpitP
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [issuer]);
+  }, [issuer, asset]);
 
   const { asks, bids, bestAsk, bestBid, mid, spread } = useMemo(() => {
     const asks = groupToLevels("ask", asksRaw, DEFAULT_LEVELS_PER_SIDE);
