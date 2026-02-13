@@ -161,6 +161,42 @@ export interface RegisterUserResponse {
   is_new: boolean;
 }
 
+export interface CreateWalletChangeRequestPayload {
+  old_address: string;
+  new_address: string;
+  email: string;
+  discord_handle: string;
+  twitter_username: string;
+}
+
+export interface CreateWalletChangeRequestResponse {
+  success: boolean;
+  request_id: number;
+  message: string;
+}
+
+export interface WalletChangeRequestItem {
+  request_id: number;
+  zealy_user_id: string;
+  zealy_name: string | null;
+  old_address: string;
+  new_address: string;
+  email: string | null;
+  discord_handle: string | null;
+  twitter_username: string | null;
+  created_at: string;
+}
+
+export interface WalletChangeRequestListResponse {
+  requests: WalletChangeRequestItem[];
+}
+
+export interface WalletChangeRequestActionResponse {
+  success: boolean;
+  request_id: number;
+  message: string;
+}
+
 // Register user when wallet connects
 export const registerUser = async (walletId: string): Promise<RegisterUserResponse> => {
   const response = await fetch(`${BACKEND_API_URL}/users/register`, {
@@ -182,6 +218,81 @@ export const fetchUserInfo = async (walletId: string): Promise<UserInfo> => {
   if (!response.ok) {
     throw new Error(`Failed to fetch user info: ${response.statusText}`);
   }
+  return response.json();
+};
+
+export const createWalletChangeRequest = async (
+  payload: CreateWalletChangeRequestPayload
+): Promise<CreateWalletChangeRequestResponse> => {
+  const response = await fetch(`${BACKEND_API_URL}/zealy/wallet-change-requests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail || `Failed to create wallet change request: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+export const fetchWalletChangeRequests = async (
+  apiKey: string
+): Promise<WalletChangeRequestItem[]> => {
+  const response = await fetch(`${BACKEND_API_URL}/admin/zealy/wallet-change-requests`, {
+    headers: {
+      "X-Admin-API-Key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail || `Failed to fetch wallet change requests: ${response.statusText}`);
+  }
+
+  const data: WalletChangeRequestListResponse = await response.json();
+  return data.requests;
+};
+
+export const approveWalletChangeRequest = async (
+  requestId: number,
+  apiKey: string
+): Promise<WalletChangeRequestActionResponse> => {
+  const response = await fetch(`${BACKEND_API_URL}/admin/zealy/wallet-change-requests/${requestId}/approve`, {
+    method: "PUT",
+    headers: {
+      "X-Admin-API-Key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail || `Failed to approve wallet change request: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+export const rejectWalletChangeRequest = async (
+  requestId: number,
+  apiKey: string
+): Promise<WalletChangeRequestActionResponse> => {
+  const response = await fetch(`${BACKEND_API_URL}/admin/zealy/wallet-change-requests/${requestId}/reject`, {
+    method: "PUT",
+    headers: {
+      "X-Admin-API-Key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail || `Failed to reject wallet change request: ${response.statusText}`);
+  }
+
   return response.json();
 };
 

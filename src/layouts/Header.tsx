@@ -4,7 +4,7 @@ import { settingsAtom } from "@/store/settings";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { MdLightMode, MdDarkMode } from "react-icons/md";
-import { UserIcon, Activity } from "lucide-react";
+import { UserIcon, Activity, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -59,6 +59,22 @@ const Header: React.FC = () => {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Account</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/admin"
+                  className="rounded-lg border-none bg-transparent p-2 text-foreground transition-colors hover:text-primary"
+                >
+                  <Shield size={20} />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Admin</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
