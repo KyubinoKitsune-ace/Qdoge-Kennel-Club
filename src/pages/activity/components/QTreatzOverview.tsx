@@ -20,7 +20,7 @@ function shortWallet(wallet: string): string {
 
 export default function QTreatzOverview() {
   const overview = useAtomValue(qtreatzOverviewAtom);
-  const updatedAt = overview ? new Date(overview.updated_at).toLocaleString() : null;
+  const updatedAt = overview ? new Date(overview.updated_at).toLocaleString("en-US", { timeZone: "UTC" }) : null;
 
   if (!overview) {
     return (
@@ -79,7 +79,7 @@ export default function QTreatzOverview() {
           <CardContent>
             <p className="text-2xl font-semibold">
               {overview.qubic_per_circulating_qtreat
-                ? Math.floor(Number(overview.qubic_per_circulating_qtreat))
+                ? formatAmount(String(Math.floor(Number(overview.qubic_per_circulating_qtreat))))
                 : "---"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Qubic balance divided by circulating QTREAT.</p>
@@ -87,7 +87,7 @@ export default function QTreatzOverview() {
         </Card>
       </div>
 
-      <Card className="min-h-0 flex-1 border-border/80 bg-card/95 shadow-sm">
+      <Card className="border-border/80 bg-card/95 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-sm">All Assets In QTREATZ Wallet</CardTitle>
@@ -95,7 +95,7 @@ export default function QTreatzOverview() {
           </div>
           <Separator className="mt-2" />
         </CardHeader>
-        <CardContent className="min-h-0">
+        <CardContent>
           <Table
             wrapperClassName="max-h-[420px] rounded-md border border-border/60"
             className="table-auto [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"

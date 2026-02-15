@@ -32,6 +32,7 @@ services:
       TRADE_UPDATE_INTERVAL: ${TRADE_UPDATE_INTERVAL:-300}
       TRADE_ISSUER: ${TRADE_ISSUER}
       TRADE_ASSET: ${TRADE_ASSET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:80,http://72.60.123.249,http://kennelclub.qdogeonqubic.com,https://kennelclub.qdogeonqubic.com}
     depends_on:
       db:
         condition: service_healthy

@@ -76,7 +76,7 @@ export default function LightweightChart({
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
   const [selectedChartType, setSelectedChartType] = useState<ChartType>("line");
   const [priceChangePercent, setPriceChangePercent] = useState<number>(0);
-  const [isChartReady, setIsChartReady] = useState(false);
+  const isChartReadyRef = useRef(false);
 
   const effectiveThemeKey = themeKey ?? theme;
 
@@ -277,7 +277,7 @@ export default function LightweightChart({
     volumeSeriesRef.current = volumeSeries;
 
     if (volumeDataSeries.length > 0) volumeSeries.setData(volumeDataSeries);
-    setIsChartReady(true);
+    isChartReadyRef.current = true;
     chart.timeScale().fitContent();
     chart.timeScale().applyOptions({
       minBarSpacing: 1,
@@ -327,17 +327,17 @@ export default function LightweightChart({
       volumeSeriesRef.current = null;
       lensLineRef.current = null;
       selectedLineRef.current = null;
-      setIsChartReady(false);
+      isChartReadyRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Create / swap active series when chart is ready or mode changes.
   useEffect(() => {
-    if (!isChartReady) return;
+    if (!isChartReadyRef.current) return;
     recreatePriceSeries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isChartReady, selectedChartType]);
+  }, [selectedChartType]);
 
   // Token-driven theme updates (no recreate => no flicker).
   useEffect(() => {

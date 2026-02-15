@@ -58,7 +58,7 @@ const Chart: React.FC<
             const high = v.max ?? Math.max(open, close);
             const low = v.min ?? Math.min(open, close);
             return {
-              time: v.time as Time,
+              time: v.time.split("T")[0] as Time,
               open,
               high,
               low,
